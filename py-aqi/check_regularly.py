@@ -18,7 +18,7 @@ PERIOD_CONTINUOUS = 0
 
 JSON_FILE = './aqi.json'
 
-MQTT_HOST = ''
+MQTT_HOST = '13.124.171.90' # broker's ip
 MQTT_TOPIC = '/weather/particulatematter'
 
 ser = serial.Serial()
@@ -146,3 +146,4 @@ if __name__ == "__main__":
         print("Going to sleep for 1 min...")
         cmd_set_sleep(1)
         time.sleep(60)
+
