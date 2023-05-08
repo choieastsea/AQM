@@ -1,15 +1,40 @@
-// mqtt broker server : 4주차 강의 참고
-
+// mqtt client server
+const AQI_TOPIC = '/weather/particulatematter'; // 실내 미세먼지 정보 관련 토픽
+const MQTT_BROKER_IP = 'mqtt://13.124.171.90:1883';
+const MONGO_DB_IP = 'mongodb://localhost:27017/test';
 const mqtt = require('mqtt');
+const mongoose = require('mongoose');
 
-const client = mqtt.connect('mqtt://13.124.171.90:1883'); // local mqtt broker를 이용
+const client = mqtt.connect(MQTT_BROKER_IP); // local mqtt broker를 이용
+const db = mongoose.connection;
+
+db.on('error', () => {
+  console.log('error mongodb');
+});
+db.on('open', () => {
+  console.log('success mongodb');
+});
+
 client.on('connect', () => {
+  //broker와 연결
   console.log('connected!');
-  client.subscribe('/weather/particulatematter', () => {
-    console.log('subscribe complete!');
+  client.subscribe(AQI_TOPIC, () => {
+    //AQI topic 구독 완료
+    console.log(`subscribe ${AQI_TOPIC} complete!`);
+    //mongodb 연결
+    mongoose.connect(MONGO_DB_IP);
   });
 });
 
 client.on('message', (topic, message) => {
-    console.log(topic, message.toString());
-})
+  // 구독중인 topic의 message 도착하면 실행되는 callback
+  if (topic === AQI_TOPIC) {
+    // 미세먼지 데이터 parsing
+    const AQData = JSON.parse(message.toString());
+    //AQData : { pm10: 5.7, pm25: 3.2, time: '08.05.2023 16:37:17' }
+    console.log(AQData.pm10);
+    console.log(AQData.pm25);
+    //mongodb에 저장 해야함
+    // brew services mongodb-community restart하면, localhost:27017 에서 몽고디비 실행됨
+  }
+});
