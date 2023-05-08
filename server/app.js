@@ -3,6 +3,9 @@ const axios = require('axios')
 const { MqttClient } = require('mqtt')
 const app = express()
 
+const MONGO_DB_IP = 'mongodb://kkh:1234@localhost:27017/admin';
+const mongoose = require('mongoose');
+const db = mongoose.connection;
 
 const port = 3000
 const serviceKey = "9OdEbSYuSWsY3x8Jk%2Bm%2FbFKeOKKPfY6olRpGAUQ8QVVC3xgfbEq8NdZvwscyJTv0KpH2TJIX3E3YylLo%2BUntsA%3D%3D"
@@ -25,6 +28,11 @@ function callAPI(){
         pm10 = recent_data["pm10Value"]
         pm25 = recent_data["pm25Value"]
         console.log(`pm10 : ${pm10}, pm25 : ${pm25}`)
+        data = `{pm10 : ${pm10}, pm25 : ${pm25}}`
+        db.collection('SCollection').insertOne(data, function(err, result) {
+            if (err) throw err;
+            console.log('Saved to MongoDB:', data);
+          });
     })
     .catch(error =>{
         console.log(error)
@@ -42,4 +50,6 @@ setInterval(()=>{
 
 app.listen(port, ()=>{
     console.log(`Listening on port : ${port}`)
+    //mongodb 연결
+    mongoose.connect(MONGO_DB_IP);
 })
