@@ -1,7 +1,7 @@
 // mqtt client server
 const AQI_TOPIC = '/weather/particulatematter'; // 실내 미세먼지 정보 관련 토픽
-const MQTT_BROKER_IP = 'mqtt://13.124.171.90:1883';
-const MONGO_DB_IP = 'mongodb://localhost:27017/test';
+const MQTT_BROKER_IP = 'mqtt://localhost:1883';
+const MONGO_DB_IP = 'mongodb://kkh:1234@localhost:27017/admin';
 const mqtt = require('mqtt');
 const mongoose = require('mongoose');
 
@@ -32,6 +32,10 @@ client.on('message', (topic, message) => {
     // 미세먼지 데이터 parsing
     const AQData = JSON.parse(message.toString());
     //AQData : { pm10: 5.7, pm25: 3.2, time: '08.05.2023 16:37:17' }
+    db.collection('AQCollection').insertOne(AQData, function(err, result) {
+      if (err) throw err;
+      console.log('Saved to MongoDB:', AQData);
+    });
     console.log(AQData.pm10);
     console.log(AQData.pm25);
     //mongodb에 저장 해야함
