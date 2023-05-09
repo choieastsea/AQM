@@ -15,6 +15,8 @@ Air Quality Manager(AQM) is a service that regularly compare air quality of indo
 listener 1883
 allow_anonymous true
 5. 해당 conf로 mosquitto broker server 실행
+ps -ef | grep mosquitto
+sudo kill
 sudo mosquitto -c /etc/mosquitto/mosquitto.conf -v
 
 ## local nodejs server setting
@@ -37,3 +39,20 @@ sudo mosquitto -c /etc/mosquitto/mosquitto.conf -v
    ```
 
    현재 js 실행하면 이렇게 나오는게 정상
+
+
+
+## react native-cli
+최신 xcode 준비
+https://reactnative.dev/docs/environment-setup
+https://github.com/react-native-community/upgrade-support/issues/161
+npx react-native@latest init AqmProject
+npm install sp-react-native-mqtt --save
+cd ios/pod
+pod file에 pod 'MQTTClient' 추가
+pod install
+xcode에서 project가 아닌 workspace파일로 프로젝트 오픈
+signing 등록
+아이폰에서 개발 모드 활성화하고, 앱 실행 허용
+https://opendoorlife.tistory.com/11
+npx react-native run-ios
