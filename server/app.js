@@ -28,8 +28,8 @@ function callAPI(){
         pm10 = recent_data["pm10Value"]
         pm25 = recent_data["pm25Value"]
         console.log(`pm10 : ${pm10}, pm25 : ${pm25}`)
-        data = `{pm10 : ${pm10}, pm25 : ${pm25}}`
-        db.collection('SCollection').insertOne(data, function(err, result) {
+        data = JSON.parse(`{"pm10" : "${pm10}", "pm25" : "${pm25}"}`)
+            db.collection('SCollection').insertOne(data, function(err, result) {
             if (err) throw err;
             console.log('Saved to MongoDB:', data);
           });

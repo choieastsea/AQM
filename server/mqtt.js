@@ -51,8 +51,26 @@ async function getData() {
   const aq_data = await aq_collection.findOne({}, { sort: { _id: -1 } });
   const s_data = await seooul_collection.findOne({}, { sort: { _id: -1 } });
   
+  const ret = []
+  // 외부에 있고, 외부 미세먼지가 좋지 않으면 마스크 착용 권고
+  //
+
+  // 실내에 있고, 외부 미세먼지가 좋지 않으면 외출 자제 권고
+  if(s_data.pm10 > 81|| s_data.pm25 > 36) {
+    console.log('현재 외부 미세먼지가 나쁨 수준입니다. 외출시 마스크를 챙기세요')
+    return ret.push('현재 외부 미세먼지가 나쁨 수준입니다. 외출시 마스크를 챙기세요');
+  }
+
+  // 실내의 미세먼지가 좋지 않을 때 공기청정기 작동 권고
+  if(aq_data.pm10 > 81|| aq_data.pm25 > 36) {
+    console.log('공기청정이 필요합니다.')
+    return ret.push('공기청정이 필요합니다.');
+  }
+
+  // 실내에 있고, 실내 미세먼지가 외부 미세먼지보다 좋지 않으면 환기 권고
   if(s_data.pm10 < aq_data.pm10 || s_data.pm25 < aq_data.pm25){
-    return '환기 시키세요';
+    console.log('환기 시키세요')
+    return ret.push('환기 시키세요');
   }
   // MongoDB 연결 종료
   // await client.close();
@@ -81,7 +99,7 @@ setInterval(async function() {
   
   const data = await getData();
   
-  if (data===null) {
+  if (data) {
     console.log('Alert to client:', data);
     
     // 데이터가 있으면 MQTT 클라이언트에게 전송
