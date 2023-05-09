@@ -6,7 +6,8 @@
  *  npx react-native start
  */
 
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
+import {INDOOR_AQI_TOPIC, OUTDOOR_AQI_TOPIC, ALERT_TOPIC} from './constant';
 import {
   Alert,
   SafeAreaView,
@@ -19,11 +20,32 @@ import {
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import MQTT from 'sp-react-native-mqtt';
+import axios from 'axios';
+import {
+  VictoryBar,
+  VictoryChart,
+  VictoryTheme,
+  VictoryLine,
+} from 'victory-native';
 
 function App(): JSX.Element {
-  const [connected, setConnected] = useState<boolean>(false);
   const [pm10, set10] = useState<string>('');
   const [pm25, set25] = useState<string>('');
+
+  const [pm10Out, set10Out] = useState<string>('');
+  const [pm25Out, set25Out] = useState<string>('');
+
+  const [chartData, setChartData] = useState({innerData: [], outerData: []});
+
+  const fetchAQChart = async () => {
+    const {data} = await axios.get('http://13.125.247.254:3000/get');
+    setChartData(data);
+  };
+
+  useEffect(() => {
+    fetchAQChart();
+  }, []);
+
   MQTT.createClient({
     uri: 'mqtt://13.125.247.254:1883',
     clientId: '01024572321',
@@ -37,16 +59,30 @@ function App(): JSX.Element {
         console.log('mqtt.event.error', msg);
       });
 
-      client.on('message', function (msg) {
-        const data = JSON.parse(msg.data);
-        Alert.alert(`pm10 : ${data.pm10}`);
-        set10(data.pm10);
-        set25(data.pm25);
+      client.on('message', function ({data, topic}) {
+        if (topic === INDOOR_AQI_TOPIC) {
+          // 실내 공기질 데이터
+          const {pm10, pm25} = JSON.parse(data);
+          set10(pm10);
+          set25(pm25);
+        }
+        if (topic === OUTDOOR_AQI_TOPIC) {
+          // 실외 공기질 데이터
+          const {pm10, pm25} = JSON.parse(data);
+          set10Out(pm10);
+          set25Out(pm25);
+        }
+        if (topic === ALERT_TOPIC) {
+          // 경고 문구
+          Alert.alert(data);
+        }
       });
 
       client.on('connect', function () {
         console.log('connected');
-        client.subscribe('/weather/particulatematter', 0);
+        client.subscribe(INDOOR_AQI_TOPIC, 0);
+        client.subscribe(OUTDOOR_AQI_TOPIC, 0);
+        client.subscribe(ALERT_TOPIC, 0);
       });
 
       client.connect();
@@ -74,10 +110,28 @@ function App(): JSX.Element {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-          <Text>Hello world</Text>
-          <Text>{connected === true ? 'true' : 'false'}</Text>
-          <Text>pm10 : {pm10}</Text>
-          <Text>pm25 : {pm25}</Text>
+          <Text style={{fontSize: 30}}>실내 공기질 현황</Text>
+          <Text style={{fontSize: 20}}>미세먼지 : {pm10}</Text>
+          <Text style={{fontSize: 20}}>초미세먼지 : {pm25}</Text>
+
+          <Text style={{fontSize: 30}}>실외 공기질 현황</Text>
+          <Text style={{fontSize: 20}}>미세먼지 : {pm10Out}</Text>
+          <Text style={{fontSize: 20}}>초미세먼지 : {pm25Out}</Text>
+
+          <Text style={{fontSize: 30}}>공기질 데이터 추이</Text>
+          <VictoryChart width={350} theme={VictoryTheme.material}>
+            <VictoryLine
+              data={chartData.innerData.map(el => el?.pm10)}
+              interpolation="natural"
+            />
+          </VictoryChart>
+          <VictoryChart width={350} theme={VictoryTheme.material}>
+            <VictoryLine
+              data={chartData.outerData.map(el => parseFloat(el?.pm10))}
+              style={{data: {stroke: 'green'}}}
+              interpolation="natural"
+            />
+          </VictoryChart>
         </View>
       </ScrollView>
     </SafeAreaView>
