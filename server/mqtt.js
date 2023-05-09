@@ -104,7 +104,7 @@ setInterval(async function () {
 
   const data = await getData();
 
-  if (data) {
+  if (data.length != 0) {
     console.log('Alert to client:', data);
 
     // 데이터가 있으면 MQTT 클라이언트에게 전송
