@@ -26,6 +26,7 @@ import {
   VictoryChart,
   VictoryTheme,
   VictoryLine,
+  VictoryAxis,
 } from 'victory-native';
 
 function App(): JSX.Element {
@@ -38,7 +39,7 @@ function App(): JSX.Element {
   const [chartData, setChartData] = useState({innerData: [], outerData: []});
 
   const fetchAQChart = async () => {
-    const {data} = await axios.get('http://13.125.247.254:3000/get');
+    const {data} = await axios.get('http://13.125.247.254:3000/getpm');
     setChartData(data);
   };
 
@@ -95,6 +96,7 @@ function App(): JSX.Element {
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    padding: 15,
   };
 
   return (
@@ -110,26 +112,56 @@ function App(): JSX.Element {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-          <Text style={{fontSize: 30}}>실내 공기질 현황</Text>
-          <Text style={{fontSize: 20}}>미세먼지 : {pm10}</Text>
-          <Text style={{fontSize: 20}}>초미세먼지 : {pm25}</Text>
+          <Text style={{fontSize: 30, marginBottom: 5}}>실내 공기질 현황</Text>
+          <Text style={{fontSize: 20, marginBottom: 5}}>미세먼지 : {pm10}</Text>
+          <Text style={{fontSize: 20, marginBottom: 5}}>
+            초미세먼지 : {pm25}
+          </Text>
 
-          <Text style={{fontSize: 30}}>실외 공기질 현황</Text>
-          <Text style={{fontSize: 20}}>미세먼지 : {pm10Out}</Text>
-          <Text style={{fontSize: 20}}>초미세먼지 : {pm25Out}</Text>
+          <Text style={{fontSize: 30, marginBottom: 5}}>실외 공기질 현황</Text>
+          <Text style={{fontSize: 20, marginBottom: 5}}>
+            미세먼지 : {pm10Out}
+          </Text>
+          <Text style={{fontSize: 20, marginBottom: 5}}>
+            초미세먼지 : {pm25Out}
+          </Text>
 
-          <Text style={{fontSize: 30}}>공기질 데이터 추이</Text>
-          <VictoryChart width={350} theme={VictoryTheme.material}>
+          {/* <Text style={{fontSize: 30}}>공기질 데이터 추이 (pm10)</Text>
+          <Text>파란색 : 실내 , 초록색 : 실외</Text>
+          <VictoryChart
+            width={350}
+            theme={VictoryTheme.material}
+            maxDomain={{y: 60}}>
+            <VictoryAxis tickFormat={() => ''} />
             <VictoryLine
-              data={chartData.innerData.map(el => el?.pm10)}
+              data={chartData.innerData.map(el => parseFloat(el?.pm10))}
               interpolation="natural"
             />
-          </VictoryChart>
-          <VictoryChart width={350} theme={VictoryTheme.material}>
             <VictoryLine
               data={chartData.outerData.map(el => parseFloat(el?.pm10))}
               style={{data: {stroke: 'green'}}}
               interpolation="natural"
+            />
+          </VictoryChart> */}
+          <Text style={{fontSize: 30, marginBottom: 5}}>
+            공기질 데이터 추이 (pm2.5)
+          </Text>
+          <Text>파란색 : 실내 , 초록색 : 실외</Text>
+          <VictoryChart
+            width={350}
+            theme={VictoryTheme.material}
+            maxDomain={{y: 40}}>
+            <VictoryAxis tickFormat={() => ''} />
+            <VictoryLine
+              data={chartData.innerData.map(el => parseFloat(el?.pm25))}
+              interpolation="natural"
+              labels={({datum}) => (datum.x === 10 ? '실내' : '')}
+            />
+            <VictoryLine
+              data={chartData.outerData.map(el => parseFloat(el?.pm25))}
+              style={{data: {stroke: 'green'}}}
+              interpolation="natural"
+              labels={({datum}) => (datum.x === 10 ? '실외' : '')}
             />
           </VictoryChart>
         </View>
