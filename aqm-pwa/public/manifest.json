@@ -1,0 +1,21 @@
+{
+  "background_color": "#ffffff",
+  "description": "Air Quality Manager(AQM) is a service that regularly compare air quality of indoor with outdoor and send alert to your Fitbit Charge 5",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Air Quality Manager",
+  "orientation": "portrait",
+  "scope": "/",
+  "short_name": "AQM",
+  "start_url": "/",
+  "theme_color": "#f2f3f5",
+  "categories": [],
+  "screenshots": [],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": []
+}
