@@ -1,20 +1,156 @@
+import { Link, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom';
+import MainPage from './MainPage';
 import {
+  Alert,
   Box,
-  Card,
-  Container,
-  Grid,
-  Tab,
-  Tabs,
+  Button,
+  CircularProgress,
+  Snackbar,
   ThemeProvider,
   Typography,
   createTheme,
 } from '@mui/material';
 import AirRoundedIcon from '@mui/icons-material/AirRounded';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import GradientBar from './GradientBar';
-import { get10level } from './util';
+import { useRecoilState, useRecoilValue } from 'recoil';
+import { fitbitToken, isAuthenticated } from './recoil';
+
+const Index = () => {
+  const [token, setToken] = useRecoilState(fitbitToken);
+  const [auth, setAuth] = useRecoilState(isAuthenticated);
+  const [loading, setLoading] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [failOpen, setFailOpen] = useState(false);
+  const [text, setText] = useState('');
+
+  const getPermission = async () => {
+    setText('get Permission');
+    // check permission
+    const result = await Notification.requestPermission();
+    setText('request Permission');
+    const registration = await navigator.serviceWorker.register('service-worker.js', {
+      scope: './',
+    });
+    setLoading(true);
+    setText('registration');
+    if (result === 'granted') {
+      setText('granted!!');
+      const subscription = await registration.pushManager.subscribe({
+        applicationServerKey:
+          'BCO9W9otJhwejN50_8h3xKTV1RSeivUo_6LdI5OuQ5WAAwlB227duTtkfgMCgAbwSt3ZiA5DWAPTvBQiGYTp7xM',
+        userVisibleOnly: true,
+      });
+      setText('subscribe success!!');
+      await fetch('https://lccxa9jaxk.execute-api.ap-southeast-2.amazonaws.com/aq/subs', {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subscription),
+      });
+      setText('subscribe save success!!');
+      setSuccessOpen(true);
+      setShowButton(false);
+    } else {
+      setText('not granted!!');
+      alert('알림을 거절하였습니다.');
+      setFailOpen(true);
+    }
+    setLoading(false);
+    // }
+  };
+  const requestRedirect = async () => {
+    const { data } = await axios.get(
+      'https://lccxa9jaxk.execute-api.ap-southeast-2.amazonaws.com/aq/fitbit'
+    );
+    const redirect_url = data?.body;
+    window.location.href = redirect_url;
+  };
+  const requestLogin = async (code) => {
+    const { data } = await axios.post(
+      'https://lccxa9jaxk.execute-api.ap-southeast-2.amazonaws.com/aq/fitbit',
+      { code }
+    );
+    const tokenReceived = {
+      accessToken: data?.accessToken,
+      refreshToken: data?.refreshToken,
+      userId: data?.userId,
+    };
+    setToken(tokenReceived);
+    setAuth(true);
+    // window.location.href = `${window.location.href.split('/')[0]}/main`;
+  };
+  const [showButton, setShowButton] = useState(false);
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      // 요청 보내서 token 받기
+      requestLogin(code);
+    } else {
+      //code가 없는 경우.. (로그인 요청 x)
+    }
+  });
+  useEffect(() => {
+    if (
+      window.Notification.permission === 'default' ||
+      window.Notification.permission === 'denied'
+    ) {
+      setShowButton(true);
+    }
+  }, []);
+  const handleClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSuccessOpen(false);
+    setFailOpen(false);
+  };
+
+  // 권한 받고, 로그인 시켜야 함
+  return (
+    <>
+      {/* <Typography>{text}</Typography> */}
+      <Typography sx={{ height: 200 }}></Typography>
+      <Box display="flex" justifyContent="center">
+        {showButton && (
+          <Button onClick={getPermission} id="subscribe">
+            알림 권한을 허용해주세요
+          </Button>
+        )}
+      </Box>
+      {loading && (
+        <Box sx={{ display: 'flex' }} justifyContent="center">
+          <CircularProgress />
+        </Box>
+      )}
+      <Box display="flex" justifyContent="center">
+        <Typography sx={{ height: 200 }}></Typography>
+        <Button onClick={requestRedirect}>
+          <img
+            src="https://www.fitbit.com/global/content/dam/fitbit/global/product-logos/fitbit-new-logo-header.svg"
+            alt="fitbit logo"
+            height={30}
+          />
+          <Typography color={'black'} fontSize={30}>
+            로그인하기
+          </Typography>
+        </Button>
+        <Snackbar open={successOpen} autoHideDuration={4000} onClose={handleClose}>
+          <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
+            이제 공기질 데이터에 대한 알림을 받을 수 있습니다!
+          </Alert>
+        </Snackbar>
+        <Snackbar open={failOpen} autoHideDuration={4000} onClose={handleClose}>
+          <Alert onClose={handleClose} severity="warning" sx={{ width: '100%' }}>
+            공기질 데이터에 대한 알림을 받을 수 없습니다.
+          </Alert>
+        </Snackbar>
+      </Box>
+    </>
+  );
+};
 
 /** style **/
 const appStyle = {
@@ -33,234 +169,21 @@ const theme = createTheme({
   },
 });
 
-const data = [
-  {
-    name: '08:00',
-    실내: 4000,
-    실외: 2400,
-  },
-  {
-    name: '09:00',
-    실내: 3000,
-    실외: 1398,
-  },
-  {
-    name: '10:00',
-    실내: 2000,
-    실외: 9800,
-  },
-  {
-    name: '11:00',
-    실내: 2780,
-    실외: 3908,
-  },
-  {
-    name: '12:00',
-    실내: 1890,
-    실외: 4800,
-  },
-  {
-    name: '13:00',
-    실내: 2390,
-    실외: 3800,
-  },
-  {
-    name: '14:00',
-    실내: 3490,
-    실외: 4300,
-  },
-];
-
-function TabPanel(props) {
-  const { children, showDegree, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={showDegree !== index}
-      id={`full-width-tabpanel-${index}`}
-      aria-labelledby={`full-width-tab-${index}`}
-      {...other}
-    >
-      {showDegree === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
-
-/** app component **/
-function App() {
-  const [airQuality, setAirQuality] = useState({ indoor: '3.3', outdoor: '2.3' });
-  const [chartData, setChartData] = useState([]);
-  const [time, setTime] = useState('');
-  const [showDegree, setShowDegree] = useState(0);
-  const handleChange = (e, newDegree) => {
-    setShowDegree(newDegree);
-  };
-  /** useEffect **/
-  useEffect(() => {
-    const updateTime = () => {
-      const currentDate = new Date();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      const date = String(currentDate.getDate()).padStart(2, '0');
-      const hours = String(currentDate.getHours()).padStart(2, '0');
-      const minutes = String(currentDate.getMinutes()).padStart(2, '0');
-      const currentTime = `${month}월 ${date}일 ${hours}시${minutes}분`;
-      setTime(currentTime);
-    };
-    const fetchData = async () => {
-      try {
-        updateTime();
-        const [chart, current] = await axios.all([
-          axios.get('https://lccxa9jaxk.execute-api.ap-southeast-2.amazonaws.com/aq/chart'),
-          axios.get('https://7h6957xq5g.execute-api.ap-southeast-2.amazonaws.com/aq/get_pm'),
-        ]);
-        const {
-          data: { body: currentData },
-        } = current;
-        const aq_data = JSON.parse(currentData);
-        console.log(aq_data);
-        setAirQuality({ indoor: aq_data?.indoor, outdoor: aq_data?.outdoor });
-        const {
-          data: { body: chartData },
-        } = chart;
-        const aq_chart = JSON.parse(chartData);
-        const data = [];
-        for (let i = 0; i < 6; i++) {
-          const currentDate = new Date();
-          const hours = currentDate.getHours();
-          const el = {
-            name: `${hours - (6 - i)}"`,
-            실내: aq_chart?.indoor.pm10[i] * 15,
-            실외: aq_chart?.outdoor.pm10[i],
-          };
-          console.log(el);
-          data.push(el);
-        }
-        console.log(data);
-        setChartData(data);
-      } catch (error) {
-        console.log('API 요청 실패:', error);
-      }
-    };
-    fetchData();
-    const interval = setInterval(fetchData, 1000 * 60); //1분마다 요청
-
-    // 컴포넌트 언마운트 시 clearInterval을 통해 타이머 제거
-    return () => clearInterval(interval);
-  }, []);
-
+const App = () => {
+  const authenticated = useRecoilValue(isAuthenticated);
   return (
     <ThemeProvider theme={theme}>
       <div style={appStyle}>
         <Box sx={{ flexGrow: 1 }}>
-          <Typography fontWeight={'bold'} color="#b2b6bf" fontSize={30}>
+          <Typography fontWeight={'bold'} color="#b2b6bf" fontSize={30} id="subscribe">
             <AirRoundedIcon sx={{ pl: 2, fontSize: 30, width: 35, transform: 'translateY(4px)' }} />
             AQM
           </Typography>
         </Box>
-        <Box sx={{ p: 1.5 }}>
-          <Card sx={{ p: 2, borderRadius: 3.5 }} elevation={0}>
-            <Typography fontWeight="bold" mb={1}>
-              실시간 공기질 데이터 정보
-            </Typography>
-            <Typography style={{ fontSize: 15, color: 'grey' }} mb={1}>
-              {time}
-            </Typography>
-            <GradientBar
-              indoor={get10level(airQuality?.indoor?.pm10 * 20)}
-              outdoor={get10level(airQuality?.outdoor?.pm10)}
-            />
-            {/* 100% 중 30% */}
-          </Card>
-          <Card sx={{ p: 2, borderRadius: 3.5, mt: 2 }} elevation={0}>
-            <Typography fontWeight="bold">상세 정보</Typography>
-            <Container>
-              <Tabs value={showDegree} onChange={handleChange} variant="fullWidth">
-                <Tab label="미세먼지" />
-                <Tab label="초미세먼지" />
-              </Tabs>
-              <TabPanel showDegree={showDegree} index={0}>
-                <Grid container>
-                  <Grid xs={6}>
-                    <Typography align='center'>
-                      실내{' '}
-                      {airQuality?.indoor?.pm10 * 20
-                        ? (airQuality?.indoor?.pm10 * 20).toFixed(0)
-                        : '-'}{' '}
-                      <span style={{ transform: 'translateY(-1px)', display: 'inline-block' }}>
-                        ㎍/㎥
-                      </span>
-                    </Typography>
-                  </Grid>
-                  <Grid xs={6}>
-                    <Typography align='center'>
-                      실외 {airQuality?.outdoor?.pm10 || '-'}{' '}
-                      <span style={{ transform: 'translateY(-1px)', display: 'inline-block' }}>
-                        ㎍/㎥
-                      </span>
-                    </Typography>
-                  </Grid>
-                </Grid>
-                <Typography fontSize={12} mt={2} color={'grey'} align="center">
-                  0~30㎍/㎥는 좋음, 31~80㎍/㎥는 보통
-                  <br /> 81~150㎍/㎥는 나쁨, 151 이상은 매우 나쁨
-                </Typography>
-              </TabPanel>
-              <TabPanel showDegree={showDegree} index={1}>
-                <Grid container>
-                  <Grid xs={6}>
-                    <Typography align='center'>
-                      실내 {(airQuality?.indoor?.pm25 * 20).toFixed(0)}{' '}
-                      <span style={{ transform: 'translateY(-1px)', display: 'inline-block' }}>
-                        ㎍/㎥
-                      </span>
-                    </Typography>
-                  </Grid>
-                  <Grid xs={6}>
-                    <Typography align='center'>
-                      실외 {airQuality?.outdoor?.pm25}{' '}
-                      <span style={{ transform: 'translateY(-1px)', display: 'inline-block' }}>
-                        ㎍/㎥
-                      </span>
-                    </Typography>
-                  </Grid>
-                </Grid>
-                <Typography fontSize={12} mt={2} color={'grey'} align="center">
-                  0~15㎍/㎥는 좋음, 16~25㎍/㎥는 보통
-                  <br /> 36~75㎍/㎥는 나쁨, 76 이상은 매우 나쁨
-                </Typography>
-              </TabPanel>
-            </Container>
-          </Card>
-          <Box m={2} />
-          <Card sx={{ p: 2, borderRadius: 3.5 }} elevation={0}>
-            <Typography fontWeight="bold" mb={2}>
-              공기질 데이터 추이
-            </Typography>
-            <LineChart
-              width={340}
-              height={200}
-              data={chartData}
-              margin={{
-                top: 10,
-                right: 30,
-                left: 0,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="실외" stroke="#8884d8" activeDot={{ r: 2 }} />
-              <Line type="monotone" dataKey="실내" stroke="#82ca9d" />
-            </LineChart>
-          </Card>
-        </Box>
+        {authenticated ? <MainPage /> : <Index />}
       </div>
     </ThemeProvider>
   );
-}
+};
 
 export default App;
